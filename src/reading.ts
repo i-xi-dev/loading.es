@@ -57,11 +57,13 @@ namespace Reading {
    * @experimental
    */
   export abstract class Task<T> extends EventTarget {
-    #total: int;
-    #indeterminate: boolean;
-    #signal: AbortSignal | undefined;
-    #progress: Progress;
-    #internal: _Internal;
+    /** The estimated total amount. */
+    protected readonly _total: int;
+
+    protected readonly _indeterminate: boolean;
+    protected readonly _signal: AbortSignal | undefined;
+    readonly #progress: Progress;
+    protected readonly _internal: _Internal;
 
     protected constructor(options?: Options) {
       super();
@@ -77,25 +79,25 @@ namespace Reading {
         throw new TypeError("options.total");
       }
 
-      this.#total = total ?? 0;
-      this.#indeterminate = typeof total !== "number";
-      this.#signal = options?.signal;
+      this._total = total ?? 0;
+      this._indeterminate = typeof total !== "number";
+      this._signal = options?.signal;
 
       // deno-lint-ignore no-this-alias
       const self = this;
       this.#progress = Object.freeze({
         get loaded() {
-          return self.#internal.loaded;
+          return self._internal.loaded;
         },
         get total() {
-          return self.#total;
+          return self._total;
         },
         get lengthComputable() {
-          return (self.#indeterminate !== true);
+          return (self._indeterminate !== true);
         },
       });
 
-      this.#internal = Object.seal({
+      this._internal = Object.seal({
         state: State.READY,
         loaded: 0,
         lastProgressNotifiedAt: Number.MIN_VALUE,
@@ -105,7 +107,7 @@ namespace Reading {
     }
 
     get state(): State {
-      return this.#internal.state;
+      return this._internal.state;
     }
 
     get progress(): Progress {
@@ -114,16 +116,16 @@ namespace Reading {
 
     // XXX 要るか？
     // get readyState(): _ReaderReadyState {
-    //   return _translateState(this.#internal.state);
+    //   return _translateState(this._internal.state);
     // }
 
     protected _notify(name: string): void {
       if (name === "progress") {
         const now = globalThis.performance.now();
-        if ((this.#internal.lastProgressNotifiedAt + 50) > now) {
+        if ((this._internal.lastProgressNotifiedAt + 50) > now) {
           return;
         }
-        this.#internal.lastProgressNotifiedAt = now;
+        this._internal.lastProgressNotifiedAt = now;
       }
 
       const event = new _ProgressEvent(name, this.progress);
