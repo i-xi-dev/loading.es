@@ -3,69 +3,55 @@ import { Integer } from "i-xi-dev/int.es";
 
 type int = number;
 
-type _Internal = {
-  state: Reading.State;
-  loaded: int;
-  lastProgressNotifiedAt: number;
-};
-
-// function _translateState(state: Reading.State): _ReaderReadyState {
-//   switch (state) {
-//     case Reading.State.READY:
-//       return _ReaderReadyState.EMPTY;
-//     case Reading.State.RUNNING:
-//       return _ReaderReadyState.LOADING;
-//     case Reading.State.COMPLETED:
-//     case Reading.State.ABORTED:
-//     case Reading.State.ERROR:
-//       return _ReaderReadyState.DONE;
-//     default:
-//       throw new TypeError("state");
-//   }
-// }
+//TODO 外に出す
+type _ProgressEventName = "abort" | "error" | "load" | "loadend" | "loadstart" | "progress" | "timeout";
 
 namespace Reading {
   /**
-   * @experimental
+   * The reading status.
    */
-  export const State = {
+  export const Status = {
     READY: "ready",
     RUNNING: "running",
     COMPLETED: "completed",
     ABORTED: "aborted",
     ERROR: "error",
   } as const;
-  export type State = typeof State[keyof typeof State];
+  export type Status = typeof Status[keyof typeof Status];
 
   /**
-   * @experimental
-   */
-  export type Progress = {
-    loaded: int;
-    total: int;
-    lengthComputable: boolean;
-  };
-
-  /**
-   * @experimental
+   * The reading options.
    */
   export type Options = {
+    /** The total length of reading, if reading has a computable length. Otherwise `undefined`. */
     total?: int;
+
+    /** The `AbortSignal` to abort reading. */
     signal?: AbortSignal;
   };
 
   /**
-   * @experimental
+   * The reading task.
    */
   export abstract class Task<T> extends EventTarget {
-    /** The estimated total amount. */
-    protected readonly _total: int;
+    /** The total length of reading. */
+    readonly #total?: int;
 
-    protected readonly _indeterminate: boolean;
+    /** The `AbortSignal` to abort reading. */
     protected readonly _signal: AbortSignal | undefined;
-    readonly #progress: Progress;
-    protected readonly _internal: _Internal;
 
+    /** The reading status. */
+    protected _status: Reading.Status;
+
+    /** The read length. */
+    protected _loaded: int;
+
+    /** The timestamp of when the `ProgressEvent` with name `"progress"` was last dispatched. */
+    #lastProgressNotifiedAt: number;
+
+    /**
+     * @param options - The reading options.
+     */
     protected constructor(options?: Options) {
       super();
 
@@ -80,59 +66,60 @@ namespace Reading {
         throw new TypeError("options.total");
       }
 
-      this._total = total ?? 0;
-      this._indeterminate = typeof total !== "number";
+      this.#total = total;
       this._signal = options?.signal;
+      this._status = Status.READY;
+      this._loaded = 0;
+      this.#lastProgressNotifiedAt = Number.MIN_VALUE;
 
-      // deno-lint-ignore no-this-alias
-      const self = this;
-      this.#progress = Object.freeze({
-        get loaded() {
-          return self._internal.loaded;
-        },
-        get total() {
-          return self._total;
-        },
-        get lengthComputable() {
-          return (self._indeterminate !== true);
-        },
-      });
-
-      this._internal = Object.seal({
-        state: State.READY,
-        loaded: 0,
-        lastProgressNotifiedAt: Number.MIN_VALUE,
-      });
-
-      // Object.freeze(this);
+      // Object.seal(this);
     }
 
-    get state(): State {
-      return this._internal.state;
+    /** The total length of reading. */
+    get total(): int {
+      return this.#total ?? 0;
     }
 
-    get progress(): Progress {
-      return this.#progress;
+    /** Whether the reading has no computable length. */
+    get indeterminate(): boolean {
+      return (typeof this.#total !== "number");
     }
 
-    // XXX 要るか？
-    // get readyState(): _ReaderReadyState {
-    //   return _translateState(this._internal.state);
-    // }
+    /** The reading status. */
+    get status(): Status {
+      return this._status;
+    }
 
-    protected _notify(name: string): void {
+    /** The read length. */
+    get loaded(): int {
+      return this._loaded;
+    }
+
+    /**
+     * Dispatch the `ProgressEvent` to notify progress.
+     * @param name - The name of `ProgressEvent`.
+     */
+    protected _notifyProgress(name: _ProgressEventName): void {
       if (name === "progress") {
         const now = globalThis.performance.now();
-        if ((this._internal.lastProgressNotifiedAt + 50) > now) {
+        if ((this.#lastProgressNotifiedAt + 50) > now) {
           return;
         }
-        this._internal.lastProgressNotifiedAt = now;
+        this.#lastProgressNotifiedAt = now;
       }
 
-      const event = new _ProgressEvent(name, this.progress);
+      const event = new _ProgressEvent(name, {
+        total: this.#total,
+        lengthComputable: (this.indeterminate !== true),
+        loaded: this._loaded,
+      });
       this.dispatchEvent(event);
     }
 
+    /**
+     * Run this reading task.
+     * @returns The `Promise` that fulfills with a read value.
+     */
     abstract run(): Promise<T>;
   }
 }
