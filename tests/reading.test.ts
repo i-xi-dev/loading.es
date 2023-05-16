@@ -1,4 +1,4 @@
-import { assertStrictEquals } from "std/testing/asserts";
+import { assertStrictEquals } from "./deps.ts";
 import { Reading } from "../mod.ts";
 
 class TestTask extends Reading.Task<string> {

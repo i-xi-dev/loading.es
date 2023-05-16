@@ -1,5 +1,4 @@
-import { _ProgressEvent } from "i-xi-dev/compat.es";
-import { Integer } from "i-xi-dev/int.es";
+import { _ProgressEvent, Integer } from "../deps.ts";
 
 type int = number;
 
