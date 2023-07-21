@@ -3,7 +3,14 @@ import { _ProgressEvent, Integer } from "../deps.ts";
 type int = number;
 
 //TODO 外に出す
-type _ProgressEventName = "abort" | "error" | "load" | "loadend" | "loadstart" | "progress" | "timeout";
+type _ProgressEventName =
+  | "abort"
+  | "error"
+  | "load"
+  | "loadend"
+  | "loadstart"
+  | "progress"
+  | "timeout";
 
 namespace Reading {
   /**

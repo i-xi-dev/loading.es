@@ -7,7 +7,7 @@ class TestTask extends Reading.Task<string> {
   }
   async run(): Promise<string> {
     return await (() => {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         resolve("");
       });
     })();
