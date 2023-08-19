@@ -1,6 +1,4 @@
-import { _ProgressEvent, Integer } from "../deps.ts";
-
-type int = number;
+import { _ProgressEvent, NonNegativeInteger } from "../deps.ts";
 
 //TODO 外に出す
 type _ProgressEventName =
@@ -30,7 +28,7 @@ namespace Reading {
    */
   export type Options = {
     /** The total length of reading, if reading has a computable length. Otherwise `undefined`. */
-    total?: int;
+    total?: NonNegativeInteger;
 
     /** The `AbortSignal` to abort reading. */
     signal?: AbortSignal;
@@ -41,7 +39,7 @@ namespace Reading {
    */
   export abstract class Task<T> extends EventTarget {
     /** The total length of reading. */
-    readonly #total?: int;
+    readonly #total?: NonNegativeInteger;
 
     /** The `AbortSignal` to abort reading. */
     protected readonly _signal: AbortSignal | undefined;
@@ -50,7 +48,7 @@ namespace Reading {
     protected _status: Reading.Status;
 
     /** The read length. */
-    protected _loaded: int;
+    protected _loaded: NonNegativeInteger;
 
     /** The timestamp of when the `ProgressEvent` with name `"progress"` was last dispatched. */
     #lastProgressNotifiedAt: number;
@@ -61,9 +59,9 @@ namespace Reading {
     protected constructor(options?: Options) {
       super();
 
-      const total: number | undefined = options?.total;
+      const total: NonNegativeInteger | undefined = options?.total;
       if (typeof total === "number") {
-        if (Integer.isNonNegativeInteger(total) !== true) {
+        if (NonNegativeInteger.isNonNegativeInteger(total) !== true) {
           throw new RangeError("options.total");
         }
       } else if (total === undefined) {
@@ -82,7 +80,7 @@ namespace Reading {
     }
 
     /** The total length of reading. */
-    get total(): int {
+    get total(): NonNegativeInteger {
       return this.#total ?? 0;
     }
 
@@ -97,7 +95,7 @@ namespace Reading {
     }
 
     /** The read length. */
-    get loaded(): int {
+    get loaded(): NonNegativeInteger {
       return this._loaded;
     }
 
