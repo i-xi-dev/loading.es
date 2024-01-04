@@ -61,7 +61,7 @@ namespace Reading {
 
       const total: SafeInteger | undefined = options?.total;
       if (typeof total === "number") {
-        if (SafeInteger.isNonNegative(total) !== true) {
+        if (SafeInteger.isNonNegativeSafeInteger(total) !== true) {
           throw new RangeError("options.total");
         }
       } else if (total === undefined) {
