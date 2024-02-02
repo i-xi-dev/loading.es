@@ -1,3 +1,3 @@
-# @i-xi-dev/reading
+# @i-xi-dev/loading
 
 This is not for direct usage.

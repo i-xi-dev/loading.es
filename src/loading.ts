@@ -1,18 +1,20 @@
 import { _ProgressEvent, SafeInteger } from "../deps.ts";
 
-//TODO 外に出す
+const _ProgressEventName = {
+  ABORT: "abort",
+  ERROR: "error",
+  LOAD: "load",
+  LOAD_END: "loadend",
+  LOAD_START: "loadstart",
+  PROGRESS: "progress",
+  TIMEOUT: "timeout",
+} as const;
 type _ProgressEventName =
-  | "abort"
-  | "error"
-  | "load"
-  | "loadend"
-  | "loadstart"
-  | "progress"
-  | "timeout";
+  typeof _ProgressEventName[keyof typeof _ProgressEventName];
 
-namespace Reading {
+export namespace Loading {
   /**
-   * The reading status.
+   * The loading status.
    */
   export const Status = {
     READY: "ready",
@@ -24,28 +26,28 @@ namespace Reading {
   export type Status = typeof Status[keyof typeof Status];
 
   /**
-   * The reading options.
+   * The loading options.
    */
   export type Options = {
-    /** The total length of reading, if reading has a computable length. Otherwise `undefined`. */
+    /** The total length of loading, if loading has a computable length. Otherwise `undefined`. */
     total?: SafeInteger;
 
-    /** The `AbortSignal` to abort reading. */
+    /** The `AbortSignal` to abort loading. */
     signal?: AbortSignal;
   };
 
   /**
-   * The reading task.
+   * The loading task.
    */
   export abstract class Task<T> extends EventTarget {
-    /** The total length of reading. */
+    /** The total length of loading. */
     readonly #total?: SafeInteger;
 
-    /** The `AbortSignal` to abort reading. */
-    protected readonly _signal: AbortSignal | undefined;
+    /** The `AbortSignal` to abort loading. */
+    protected readonly _signal?: AbortSignal;
 
-    /** The reading status. */
-    protected _status: Reading.Status;
+    /** The loading status. */
+    protected _status: Loading.Status;
 
     /** The read length. */
     protected _loaded: SafeInteger;
@@ -54,7 +56,7 @@ namespace Reading {
     #lastProgressNotifiedAt: number;
 
     /**
-     * @param options - The reading options.
+     * @param options - The loading options.
      */
     protected constructor(options?: Options) {
       super();
@@ -74,22 +76,22 @@ namespace Reading {
       this._signal = options?.signal;
       this._status = Status.READY;
       this._loaded = 0;
-      this.#lastProgressNotifiedAt = Number.MIN_VALUE;
+      this.#lastProgressNotifiedAt = -1;
 
       // Object.seal(this);
     }
 
-    /** The total length of reading. */
+    /** The total length of loading. */
     get total(): SafeInteger {
       return this.#total ?? 0;
     }
 
-    /** Whether the reading has no computable length. */
+    /** Whether the loading has no computable length. */
     get indeterminate(): boolean {
-      return (typeof this.#total !== "number");
+      return (SafeInteger.isNonNegativeSafeInteger(this.#total) !== true);
     }
 
-    /** The reading status. */
+    /** The loading status. */
     get status(): Status {
       return this._status;
     }
@@ -104,7 +106,7 @@ namespace Reading {
      * @param name - The name of `ProgressEvent`.
      */
     protected _notifyProgress(name: _ProgressEventName): void {
-      if (name === "progress") {
+      if (name === _ProgressEventName.PROGRESS) {
         const now = globalThis.performance.now();
         if ((this.#lastProgressNotifiedAt + 50) > now) {
           return;
@@ -121,12 +123,9 @@ namespace Reading {
     }
 
     /**
-     * Run this reading task.
+     * Run this loading task.
      * @returns The `Promise` that fulfills with a read value.
      */
     abstract run(): Promise<T>;
   }
 }
-Object.freeze(Reading);
-
-export { Reading };
